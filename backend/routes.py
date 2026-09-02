@@ -10,6 +10,8 @@ from pymongo.results import InsertOneResult
 from bson.objectid import ObjectId
 import sys
 
+
+
 SITE_ROOT = os.path.realpath(os.path.dirname(__file__))
 json_url = os.path.join(SITE_ROOT, "data", "songs.json")
 songs_list: list = json.load(open(json_url))
@@ -58,7 +60,7 @@ def parse_json(data):
 ######################################################################
 @app.route("/health")
 def health():
-    return jsonify(dict(status="OK")), 200
+    return jsonify(dict(status="OKOK")), 200
 
 
 ######################################################################
@@ -67,8 +69,54 @@ def health():
 @app.route("/count")
 def count():
     """return length of data"""
-    if data:
-        return jsonify(length=len(data)), 200
+    count = db.songs.count_documents({})
+    return {"count": count}, 200
 
-    return jsonify(message="Internal server error"), 500
+@app.route("/song")
+def songs():
+    """return all songs"""
+    songs_data = db.songs.find({})
+    return {"songs": parse_json(songs_data)}, 200
 
+@app.route("/song/<int:id>")
+def get_song_by_id(id):
+    """return a song by id"""
+    song = db.songs.find_one({"id": id})
+    if song is None:
+        return {"message": "song with id not found"}, 404
+    return parse_json(song), 200
+
+@app.route("/song", methods=["POST"])
+def create_song():
+    """create a new song"""
+    song = request.get_json()
+
+    existing_song = db.songs.find_one({"id": song["id"]})
+    if existing_song:
+        return {"Message": f"song with id {song['id']} already present"}, 302
+
+    db.songs.insert_one(song)
+    return parse_json(song), 201
+
+@app.route("/song/<int:id>", methods=["PUT"])
+def update_song(id):
+    """update a song by id"""
+    song_data = request.get_json()
+
+    song = db.songs.find_one({"id": id})
+    if song is None:
+        return {"message": "song not found"}, 404
+
+    db.songs.update_one({"id": id}, {"$set": song_data})
+    updated_song = db.songs.find_one({"id": id})
+    return parse_json(updated_song), 200
+
+@app.route("/song/<int:id>", methods=["DELETE"])
+def delete_song(id):
+    """delete a song by id"""
+    result = db.songs.delete_one({"id": id})
+
+    if result.deleted_count == 0:
+        return {"message": "song not found"}, 404
+
+    return "", 204
