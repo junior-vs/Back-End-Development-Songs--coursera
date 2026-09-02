@@ -51,3 +51,24 @@ def parse_json(data):
 ######################################################################
 # INSERT CODE HERE
 ######################################################################
+
+
+######################################################################
+# RETURN HEALTH OF THE APP
+######################################################################
+@app.route("/health")
+def health():
+    return jsonify(dict(status="OK")), 200
+
+
+######################################################################
+# COUNT THE NUMBER OF PICTURES
+######################################################################
+@app.route("/count")
+def count():
+    """return length of data"""
+    if data:
+        return jsonify(length=len(data)), 200
+
+    return jsonify(message="Internal server error"), 500
+
